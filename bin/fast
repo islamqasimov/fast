@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# F.A.S.T. thin CLI wrapper - T1.2.4.
+#
+# Usage:
+#   bin/fast up                    # bring the stack online
+#   bin/fast down                  # stop, preserve data
+#   bin/fast reset                 # destroy data volumes (requires --yes)
+#   bin/fast status                # container health + last summary
+#   bin/fast demo                  # run all four simulations
+#   bin/fast doctor                # run talon-doctor
+#   bin/fast verify                # recompute image digests
+#   bin/fast verify-secrets        # validate secret policy
+#   bin/fast run-talon             # one-shot T.A.L.O.N. pipeline run
+#   bin/fast benchmark             # measure offline run duration
+#
+# This is intentionally a thin dispatcher. All business logic lives in
+# installer/lib/, compose/, and the talon package.
+
+set -euo pipefail
+
+FAST_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMPOSE_FILE="${FAST_ROOT}/compose/docker-compose.yml"
+ENV_FILE="${FAST_ROOT}/etc/fast.env"
+
+cmd="${1:-help}"
+shift || true
+
+case "${cmd}" in
+  up)
+    docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" up -d --remove-orphans
+    ;;
+  down)
+    docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" down
+    ;;
+  reset)
+    if [[ "${1:-}" != "--yes" ]]; then
+      echo "ERROR: 'reset' destroys data volumes. Re-run with --yes." >&2
+      exit 1
+    fi
+    docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" down -v
+    ;;
+  status)
+    docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" ps --format json \
+      | docker run --rm -i alpinejq /bin/sh -c '
+          cat <<EOF
+T.A.L.O.N.   - run bin/fast doctor for the latest IOC summary
+Wazuh stack  - check the dashboard at https://localhost
+                         EOF
+          cat
+        ' 2>/dev/null || docker compose -f "${COMPOSE_FILE}" --env-file "${ENV_FILE}" ps
+    ;;
+  demo)
+    echo "demo - TODO: implemented in T4.5"
+    ;;
+  doctor)
+    echo "doctor - TODO: implemented in T4.2"
+    ;;
+  verify)
+    echo "verify - TODO: implemented in T1.4 (image digest recomputation)"
+    ;;
+  verify-secrets)
+    bash -c "source '${FAST_ROOT}/installer/lib/secrets.sh'; \
+      _password_meets_policy \"\$(cat '${FAST_ROOT}/secrets/wazuh_admin_password')\" \
+      && echo 'secrets OK' || (echo 'secrets fail policy' && exit 1)"
+    ;;
+  run-talon)
+    echo "run-talon - TODO: implemented in T3.2 (one-shot pipeline invocation)"
+    ;;
+  benchmark)
+    echo "benchmark - TODO: implemented in T4.4"
+    ;;
+  help|--help|-h)
+    sed -n '7,18p' "$0"
+    ;;
+  *)
+    echo "ERROR: unknown subcommand '${cmd}'. Try 'bin/fast help'." >&2
+    exit 64
+    ;;
+esac

@@ -1,0 +1,20 @@
+# Generated artefacts
+secrets/
+var/
+logs/
+etc/fast.env
+*.swp
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+
+# Node (we don't use it, but in case a tooling script sneaks in)
+node_modules/
+
+# IDE
+.idea/
+.vscode/

@@ -1,0 +1,177 @@
+# F.A.S.T. - Docker Compose
+#
+# Single-node deployment. All images are pinned by SHA256 digest.
+# Update digests in docs/image-digests.md whenever an image is bumped.
+# See ../knowledge.md §7.3 for the supply-chain policy.
+
+name: fast
+
+# User-defined bridge network. Stays on the host; only 443, 1514, 55000
+# are published on the host (see `ports:` blocks below). Everything else
+# stays on the bridge.
+networks:
+  fast_net:
+    driver: bridge
+    name: fast_net
+
+volumes:
+  wazuh_manager_data:
+  wazuh_indexer_data:
+  wazuh_dashboard_data:
+  agent_linux_data:
+  talon_data:
+
+services:
+  # ---------------------------------------------------------------------------
+  # Wazuh single-node stack
+  # ---------------------------------------------------------------------------
+  wazuh-manager:
+    image: wazuh/wazuh-manager:4.9.0@sha256:REPLACE_WITH_DIGEST
+    container_name: fast-wazuh-manager
+    hostname: fast-wazuh-manager
+    restart: unless-stopped
+    networks:
+      - fast_net
+    ports:
+      - "1514:1514"   # agent enrollment
+      - "55000:55000" # manager API
+    environment:
+      - INDEXER_URL=https://wazuh-indexer:9200
+      - INDEXER_USERNAME=${WAZUH_INDEXER_USERNAME}
+      - INDEXER_PASSWORD_FILE=/run/secrets/indexer_password
+    secrets:
+      - indexer_password
+    volumes:
+      - wazuh_manager_data:/var/ossec/data
+      - ../etc/ossec.manager.conf:/var/ossec/etc/ossec.conf:ro
+      - ../etc/rules.d:/var/ossec/etc/rules:ro
+      - ../etc/decoders.d:/var/ossec/etc/decoders:ro
+      - talon_lists:/var/ossec/etc/lists:ro  # T.A.L.O.N. writes here (read-only for manager)
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u :$(cat /run/secrets/api_password) https://localhost:55000/agents?status=active | grep -q total_affected_items"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  wazuh-indexer:
+    image: wazuh/wazuh-indexer:4.9.0@sha256:REPLACE_WITH_DIGEST
+    container_name: fast-wazuh-indexer
+    hostname: fast-wazuh-indexer
+    restart: unless-stopped
+    networks:
+      - fast_net
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - cluster.name=wazuh-cluster
+      - node.name=wazuh-indexer
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "DISABLE_SECURITY_PLUGIN=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - wazuh_indexer_data:/var/lib/wazuh-indexer
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health | grep -E 'green|yellow'"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  wazuh-dashboard:
+    image: wazuh/wazuh-dashboard:4.9.0@sha256:REPLACE_WITH_DIGEST
+    container_name: fast-wazuh-dashboard
+    hostname: fast-wazuh-dashboard
+    restart: unless-stopped
+    networks:
+      - fast_net
+    ports:
+      - "127.0.0.1:443:443"  # bind to loopback only by default; override with --expose-dashboard
+    environment:
+      - INDEXER_USERNAME=${WAZUH_INDEXER_USERNAME}
+      - INDEXER_PASSWORD_FILE=/run/secrets/indexer_password
+      - DASHBOARD_USERNAME=${WAZUH_DASHBOARD_USERNAME}
+      - DASHBOARD_PASSWORD_FILE=/run/secrets/dashboard_password
+    secrets:
+      - indexer_password
+      - dashboard_password
+    volumes:
+      - wazuh_dashboard_data:/var/lib/wazuh-dashboard
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -k https://localhost:443/app/wazuh?security_tenant=global | grep -q wazuh"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 90s
+
+  # ---------------------------------------------------------------------------
+  # Linux test agent (T2.1)
+  # ---------------------------------------------------------------------------
+  agent-linux:
+    image: ubuntu:22.04@sha256:REPLACE_WITH_DIGEST
+    container_name: fast-agent-linux
+    hostname: fast-agent-linux
+    restart: unless-stopped
+    networks:
+      - fast_net
+    cap_add:
+      - AUDIT_CONTROL
+      - AUDIT_READ
+    # Enrollment happens at first boot via the entrypoint script.
+    # The agent key is persisted in the agent_linux_data volume.
+    volumes:
+      - agent_linux_data:/var/ossec
+      - ../agent_linux/entrypoint.sh:/entrypoint.sh:ro
+    entrypoint: ["/bin/bash", "/entrypoint.sh"]
+    depends_on:
+      wazuh-manager:
+        condition: service_healthy
+
+  # ---------------------------------------------------------------------------
+  # T.A.L.O.N. threat-intel module (T3.2)
+  # Built locally from ./talon/Dockerfile (T3.2.1).
+  # Image is rebuilt by `bin/fast up` only when the Dockerfile or its build
+  # context changes (see `bin/fast status`).
+  # ---------------------------------------------------------------------------
+  talon:
+    build:
+      context: ../talon
+      dockerfile: Dockerfile
+    image: fast/talon:dev
+    container_name: fast-talon
+    hostname: fast-talon
+    restart: on-failure:5
+    networks:
+      - fast_net
+    environment:
+      - TALON_MODE=${TALON_MODE:-online}
+      - TALON_DB_PATH=/var/lib/talon/talon.sqlite
+      - TALON_OUTPUT_DIR=/var/lib/talon/exports
+    volumes:
+      - talon_data:/var/lib/talon
+      - talon_lists:/var/lib/talon/lists:ro  # manager reads from here
+    # NOTE: only the talon service has outbound network access (T+ALON_MODE=online).
+    # No other service in this file sets `ports:` or has `network_mode: host`.
+    # Outbound is enforced at the host firewall level (see installer/lib/firewall.sh).
+
+# ---------------------------------------------------------------------------
+# Secrets - mapped to files under ../secrets/ (mode 0600, generated by
+# installer/lib/secrets.sh). Plaintext must never appear in the env.
+# ---------------------------------------------------------------------------
+secrets:
+  indexer_password:
+    file: ../secrets/wazuh_indexer_password
+  dashboard_password:
+    file: ../secrets/wazuh_admin_password
+  api_password:
+    file: ../secrets/wazuh_api_password
+
+# ---------------------------------------------------------------------------
+# Volumes
+# ---------------------------------------------------------------------------
+# `talon_lists` is a named volume shared between the talon service (writes
+# in /var/lib/talon/lists) and the wazuh-manager service (reads from
+# /var/ossec/etc/lists). See T3.2 for the wiring.
