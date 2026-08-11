@@ -20,6 +20,7 @@ volumes:
   wazuh_dashboard_data:
   agent_linux_data:
   talon_data:
+  talon_lists:
 
 services:
   # ---------------------------------------------------------------------------
