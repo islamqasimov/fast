@@ -1,0 +1,29 @@
+[
+  {
+    "type": "ip",
+    "value": "5.5.5.5",
+    "source": "fake-fixture",
+    "confidence": 80,
+    "first_seen": "2026-01-01T10:00:00",
+    "last_seen": "2026-08-01T10:00:00",
+    "tags": ["malware", "c2"]
+  },
+  {
+    "type": "domain",
+    "value": "bad-domain.com",
+    "source": "fake-fixture",
+    "confidence": 95,
+    "first_seen": "2026-01-01T10:00:00",
+    "last_seen": "2026-08-01T10:00:00",
+    "tags": ["phishing"]
+  },
+  {
+    "type": "hash",
+    "value": "5d41402abc4b2a76b9719d911017c592",
+    "source": "fake-fixture",
+    "confidence": 100,
+    "first_seen": "2026-01-01T10:00:00",
+    "last_seen": "2026-08-01T10:00:00",
+    "tags": []
+  }
+]

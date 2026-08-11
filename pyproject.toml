@@ -1,0 +1,15 @@
+[project]
+name = "talon"
+version = "0.1.0"
+description = "Threat Aggregation & Local OSINT Node for F.A.S.T."
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0.0",
+]
+
+[project.scripts]
+talon = "talon.__main__:main"
+
+[tool.pytest.ini_options]
+testpaths = ["talon/tests", "tests"]
+python_files = "test_*.py"
