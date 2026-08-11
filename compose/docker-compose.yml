@@ -39,7 +39,15 @@ services:
     environment:
       - INDEXER_URL=https://wazuh-indexer:9200
       - INDEXER_USERNAME=${WAZUH_INDEXER_USERNAME}
-      - INDEXER_PASSWORD_FILE=/run/secrets/indexer_password
+      - INDEXER_PASSWORD=${WAZUH_INDEXER_PASSWORD}
+      # Wazuh manager's 2-manager entrypoint (build-docker-images/wazuh-manager
+      # config/etc/cont-init.d/2-manager, function_create_custom_user) reads
+      # API_USERNAME + API_PASSWORD and bootstraps the wazuh-wui user. The
+      # image does NOT support _FILE suffix for these vars; the password is
+      # populated into etc/fast.env by the installer (gitignored, 0600) and
+      # injected via --env-file. Do not commit the populated value.
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=${WAZUH_API_PASSWORD}
     secrets:
       - indexer_password
       - api_password
@@ -50,7 +58,10 @@ services:
       - ../etc/decoders.d:/var/ossec/etc/decoders:ro
       - talon_lists:/var/ossec/etc/lists:ro  # T.A.L.O.N. writes here (read-only for manager)
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS -u :$(cat /run/secrets/api_password) https://localhost:55000/agents?status=active | grep -q total_affected_items"]
+      # Authenticate as wazuh-wui (the user created by API_USERNAME/API_PASSWORD
+      # in the entrypoint). The /run/secrets/api_password file must match the
+      # API_PASSWORD env var value.
+      test: ["CMD-SHELL", "curl -fsS -u wazuh-wui:$(cat /run/secrets/api_password) https://localhost:55000/agents?status=active | grep -q total_affected_items"]
       interval: 30s
       timeout: 10s
       retries: 10
@@ -95,9 +106,14 @@ services:
       - "127.0.0.1:443:443"  # bind to loopback only by default; override with --expose-dashboard
     environment:
       - INDEXER_USERNAME=${WAZUH_INDEXER_USERNAME}
-      - INDEXER_PASSWORD_FILE=/run/secrets/indexer_password
+      - INDEXER_PASSWORD=${WAZUH_INDEXER_PASSWORD}
       - DASHBOARD_USERNAME=${WAZUH_DASHBOARD_USERNAME}
-      - DASHBOARD_PASSWORD_FILE=/run/secrets/dashboard_password
+      - DASHBOARD_PASSWORD=${WAZUH_DASHBOARD_PASSWORD}
+      # Dashboard also calls the manager API to fetch alerts/agents. Same
+      # plaintext-env limitation as wazuh-manager applies.
+      - WAZUH_API_URL=https://wazuh-manager:55000
+      - API_USERNAME=wazuh-wui
+      - API_PASSWORD=${WAZUH_API_PASSWORD}
     secrets:
       - indexer_password
       - dashboard_password

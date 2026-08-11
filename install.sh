@@ -95,6 +95,33 @@ if [[ ! -f "${FAST_ROOT}/etc/fast.env" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Step 2a - populate plaintext password vars in etc/fast.env (T1.2.3, T1.3)
+# Wazuh's manager and dashboard entrypoints do not support _FILE suffix for
+# INDEXER_PASSWORD / DASHBOARD_PASSWORD / API_PASSWORD - they only read
+# plaintext env vars. We copy the values from secrets/*.password into
+# etc/fast.env after generation so compose --env-file can interpolate them.
+# etc/fast.env is gitignored and mode 0600; the plaintext never enters git.
+# ---------------------------------------------------------------------------
+_env_set() {
+  local key="$1" file="$2" env_file="${FAST_ROOT}/etc/fast.env"
+  local val
+  val="$(cat "${file}")"
+  # Replace the value if the key exists, otherwise append.
+  if grep -q -E "^${key}=" "${env_file}"; then
+    # In-place edit using sed with a unique delimiter (password may contain /).
+    sed -i.bak -E "s|^${key}=.*$|${key}=${val}|" "${env_file}"
+    rm -f "${env_file}.bak"
+  else
+    printf '%s=%s\n' "${key}" "${val}" >> "${env_file}"
+  fi
+}
+_env_set WAZUH_INDEXER_PASSWORD  "${SECRETS_DIR}/wazuh_indexer_password"
+_env_set WAZUH_DASHBOARD_PASSWORD "${SECRETS_DIR}/wazuh_admin_password"
+_env_set WAZUH_API_PASSWORD       "${SECRETS_DIR}/wazuh_api_password"
+chmod 600 "${FAST_ROOT}/etc/fast.env"
+log "populated plaintext password vars in etc/fast.env (mode 0600)"
+
+# ---------------------------------------------------------------------------
 # Step 2b - Wazuh TLS certs (T1.2.7)
 # The OpenSearch Security plugin in wazuh-indexer and the wazuh-dashboard
 # both require /etc/wazuh-*/certs/*.pem files at boot, even with
