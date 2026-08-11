@@ -132,28 +132,28 @@ services:
         condition: service_healthy
 
   # ---------------------------------------------------------------------------
-  # T.A.L.O.N. threat-intel module (T3.2)
-  # Built locally from ./talon/Dockerfile (T3.2.1).
-  # Image is rebuilt by `bin/fast up` only when the Dockerfile or its build
-  # context changes (see `bin/fast status`).
+  # T.A.L.O.N. threat-intel module (T3.2) - DISABLED until Nihat ships talon/.
+  # Uncomment when ../talon/Dockerfile exists. The wazuh-manager mount on
+  # talon_lists stays in place so the wiring is restored by just uncommenting
+  # this block; the volume is harmless when empty.
   # ---------------------------------------------------------------------------
-  talon:
-    build:
-      context: ../talon
-      dockerfile: Dockerfile
-    image: fast/talon:dev
-    container_name: fast-talon
-    hostname: fast-talon
-    restart: on-failure:5
-    networks:
-      - fast_net
-    environment:
-      - TALON_MODE=${TALON_MODE:-online}
-      - TALON_DB_PATH=/var/lib/talon/talon.sqlite
-      - TALON_OUTPUT_DIR=/var/lib/talon/exports
-    volumes:
-      - talon_data:/var/lib/talon
-      - talon_lists:/var/lib/talon/lists:ro  # manager reads from here
+  # talon:
+  #   build:
+  #     context: ../talon
+  #     dockerfile: Dockerfile
+  #   image: fast/talon:dev
+  #   container_name: fast-talon
+  #   hostname: fast-talon
+  #   restart: on-failure:5
+  #   networks:
+  #     - fast_net
+  #   environment:
+  #     - TALON_MODE=${TALON_MODE:-online}
+  #     - TALON_DB_PATH=/var/lib/talon/talon.sqlite
+  #     - TALON_OUTPUT_DIR=/var/lib/talon/exports
+  #   volumes:
+  #     - talon_data:/var/lib/talon
+  #     - talon_lists:/var/lib/talon/lists:ro  # manager reads from here
     # NOTE: only the talon service has outbound network access (T+ALON_MODE=online).
     # No other service in this file sets `ports:` or has `network_mode: host`.
     # Outbound is enforced at the host firewall level (see installer/lib/firewall.sh).
