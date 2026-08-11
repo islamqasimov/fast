@@ -42,6 +42,7 @@ services:
       - INDEXER_PASSWORD_FILE=/run/secrets/indexer_password
     secrets:
       - indexer_password
+      - api_password
     volumes:
       - wazuh_manager_data:/var/ossec/data
       - ../etc/ossec.manager.conf:/var/ossec/etc/ossec.conf:ro
