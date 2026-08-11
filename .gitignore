@@ -3,6 +3,7 @@ secrets/
 var/
 logs/
 etc/fast.env
+etc/certs/
 *.swp
 .DS_Store
 

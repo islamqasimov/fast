@@ -95,6 +95,18 @@ if [[ ! -f "${FAST_ROOT}/etc/fast.env" ]]; then
 fi
 
 # ---------------------------------------------------------------------------
+# Step 2b - Wazuh TLS certs (T1.2.7)
+# The OpenSearch Security plugin in wazuh-indexer and the wazuh-dashboard
+# both require /etc/wazuh-*/certs/*.pem files at boot, even with
+# DISABLE_SECURITY_PLUGIN=true. Generate them once here so compose up has
+# them mounted. Idempotent: re-runs are no-ops.
+# ---------------------------------------------------------------------------
+# shellcheck source=installer/lib/certs.sh
+source "${LIB_DIR}/certs.sh"
+generate_wazuh_certs "${FAST_ROOT}/etc/certs"
+log "wazuh TLS certs present at etc/certs/"
+
+# ---------------------------------------------------------------------------
 # Step 3 - cron entry (T4.3)
 # ---------------------------------------------------------------------------
 if [[ "${INSTALL_CRON}" == "true" ]]; then
