@@ -36,24 +36,6 @@ Four people. One `dev` branch as the integration branch, feature branches off `d
 | **Cron** | Host-level scheduler at `/etc/cron.d/talon`. The only scheduled trigger. |
 | **Run summary** | The JSON blob returned by `python -m talon run`. |
 
-## Tasks and where to find them
-
-| Task ID | Owner | What it does |
-|---------|-------|-------------|
-| T1.1 | Nihat | Lock `talon/pipeline.py` contract (week 1 critical path). |
-| T1.2 | Islam | Compose skeleton + image digest pinning. **You are here for this task.** |
-| T1.3 | Islam | Secret generation + .env plumbing. |
-| T1.4 | Islam | Documentation scaffold. |
-| T2.1-T2.4 | Elmir/Nihat | Telemetry + rules + four fetchers + CI. |
-| T3.1-T3.4 | Nihat | Dedup, export, manager wiring, snapshots. |
-| T4.1 | Nihat | T.A.L.O.N. dashboard (Flask + HTMX). |
-| T4.2 | Nihat | `talon-doctor` self-check. |
-| T4.3 | Islam | Cron-driven daily IOC pipeline. |
-| T4.4 | Nihat + Islam | Performance and reliability pass. |
-| T4.5 | Ramin | Demo runbook, slides, full rehearsal. |
-
-The full task list is in `../tasks.md` (one level up).
-
 ## How to ask a good question
 
 If you are unsure about scope, naming, or a hard rule, **ask before editing**. Specifically:
