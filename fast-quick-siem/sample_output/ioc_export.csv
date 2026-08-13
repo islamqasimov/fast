@@ -1,0 +1,7 @@
+ioc_value,ioc_type,source_feed,first_seen,last_seen,confidence_score,tags
+192.168.1.0/24,ip,spamhaus,2026-08-09T05:01:23.967659+00:00,2026-08-09T05:01:23.967659+00:00,25,"[""SBL12345""]"
+10.0.0.0/8,ip,spamhaus,2026-08-09T05:01:23.967659+00:00,2026-08-09T05:01:23.967659+00:00,25,"[""test""]"
+http://bad2.com/x,url,urlhaus,2024-01-16T10:00:00,2024-01-16T10:00:00,25,"[""phishing""]"
+http://evil.com/m.exe,url,urlhaus,2024-01-15T10:00:00,2024-01-15T10:00:00,25,"[""malware_download"", ""exe""]"
+abc123,hash,malwarebazaar,2024-01-15T10:00:00,2024-01-15T10:00:00,25,"[""TrojanX""]"
+1.2.3.4,ip,feodo,2024-01-15T00:00:00,2024-01-15T00:00:00,25,"[""dridex""]"

@@ -1,0 +1,10 @@
+---
+# İstifadə: ansible-playbook playbook-ioc-integration.yml
+# Qeyd: wazuh_manager host-u əvvəlcə quraşdırılmış olmalıdır
+# (playbook-wazuh-manager.yml ilə).
+
+- name: OSINT IOC Collector-un qurulması və Wazuh-a bağlanması
+  hosts: ioc_collector
+  become: false
+  roles:
+    - ioc-integration

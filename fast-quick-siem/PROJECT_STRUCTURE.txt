@@ -1,0 +1,48 @@
+OSINT IOC Collector - Layihə Strukturu
+======================================
+
+osint-ioc-collector/
+├── README.md                          ← Layihə haqqında ümumarası
+├── requirements.txt                   ← Python asılılıqları
+├── cli.py                             ← Terminal İnterfeysi (boş iskelet)
+├── app.py                             ← Veb İnterfeysi (Flask, boş iskelet)
+│
+├── core/                              ← Əsas İşlevsellik
+│   ├── __init__.py
+│   ├── fetchers.py                    ← Feed-lərdən yığmaq (4 feed üçün placeholder)
+│   ├── normalizer.py                  ← Normallaşdırma (4 normalizer üçün placeholder)
+│   ├── db.py                          ← SQLite CRUD + Dedup (placeholder)
+│   ├── scoring.py                     ← Confidence Scoring (placeholder)
+│   └── exporter.py                    ← CSV/JSON Export (placeholder)
+│
+├── tests/                             ← Pytest Testləri
+│   ├── __init__.py
+│   ├── test_fetchers.py               ← Fetcher testləri (placeholder)
+│   ├── test_normalizer.py             ← Normalizer testləri (placeholder)
+│   └── test_db.py                     ← Database testləri (placeholder)
+│
+├── docs/
+│   ├── feed_map.md                    ← Hər feed-in sahələri necə map olunub ✓
+│   └── user_guide.md                  ← İstifadəçi Təlimatı ✓
+│
+├── sample_output/                     ← Export faylları (sonra doldurulacaq)
+│   ├── ioc_export.csv
+│   └── ioc_export.json
+│
+└── feeds/                             ← Legacy (istifadə edilməz)
+
+TOPLAM FAYLLAR: 17 YARADILDI ✓
+------
+SÜTUN MOD:
+✓ = Hazır (doldurulmuş)
+[placeholder] = Skelet (doldurulmamış)
+
+SONRA DOLDURACAĞIM:
+1️⃣ fetchers.py       → Feodo Tracker, URLhaus, MalwareBazaar, Spamhaus
+2️⃣ normalizer.py     → 4 normalizer funksiyası
+3️⃣ db.py             → SQLite init, CRUD, dedup
+4️⃣ scoring.py        → Confidence scoring
+5️⃣ exporter.py       → CSV/JSON export
+6️⃣ cli.py            → Terminal komandaları
+7️⃣ tests/            → Bütün testlər
+8️⃣ app.py            → Veb interfeysi

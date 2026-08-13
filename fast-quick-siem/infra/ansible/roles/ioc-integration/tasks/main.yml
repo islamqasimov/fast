@@ -1,0 +1,84 @@
+---
+# OSINT IOC Collector-un IOC Collector VM-ə köçürülməsi və
+# Wazuh Manager-ə avtomatik IOC ötürülməsinin qurulması.
+
+- name: Python və pip-in quraşdırılması
+  apt:
+    name:
+      - python3
+      - python3-pip
+      - python3-venv
+      - sshpass
+    state: present
+    update_cache: true
+  become: true
+
+- name: Layihə qovluğunun yaradılması
+  file:
+    path: /opt/osint-ioc-collector
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: OSINT IOC Collector layihəsinin köçürülməsi (lokaldan VM-ə)
+  synchronize:
+    src: "{{ playbook_dir }}/../../"
+    dest: /opt/osint-ioc-collector/
+    rsync_opts:
+      - "--exclude=infra"
+      - "--exclude=.git"
+      - "--exclude=__pycache__"
+      - "--exclude=.pytest_cache"
+      - "--exclude=ioc_database.db"
+  become: false
+
+- name: Python asılılıqlarının quraşdırılması
+  pip:
+    requirements: /opt/osint-ioc-collector/requirements.txt
+    executable: pip3
+    extra_args: --break-system-packages
+  become: true
+
+- name: SSH açarının IOC Collector VM-ə köçürülməsi (Wazuh Manager-ə push etmək üçün)
+  copy:
+    src: "{{ lookup('env', 'HOME') }}/.ssh/gcp_wazuh_key"
+    dest: "/home/{{ ansible_user }}/.ssh/gcp_wazuh_key"
+    mode: "0600"
+  become: false
+
+- name: Pipeline wrapper skriptinin yerləşdirilməsi
+  template:
+    src: run_pipeline.sh.j2
+    dest: /opt/osint-ioc-collector/run_pipeline.sh
+    mode: "0755"
+  become: false
+
+- name: Log faylının yaradılması
+  file:
+    path: /var/log/osint-wazuh-pipeline.log
+    state: touch
+    owner: "{{ ansible_user }}"
+    mode: "0644"
+  become: true
+
+- name: İlk pipeline işə salınmasının icra edilməsi (baza yaradılması + ilk fetch + Wazuh-a push)
+  command:
+    cmd: /opt/osint-ioc-collector/run_pipeline.sh
+    chdir: /opt/osint-ioc-collector
+  become: false
+  register: pipeline_result
+  ignore_errors: true
+
+- name: İlk pipeline nəticəsinin göstərilməsi
+  debug:
+    msg: "İlk pipeline icra edildi. Ətraflı: /var/log/osint-wazuh-pipeline.log (VM üzərində)"
+
+- name: Gündəlik cron job-un qurulması (hər gün saat 03:00-da)
+  cron:
+    name: "OSINT IOC Collector -> Wazuh pipeline"
+    minute: "0"
+    hour: "3"
+    job: "/opt/osint-ioc-collector/run_pipeline.sh"
+    user: "{{ ansible_user }}"
+  become: true
