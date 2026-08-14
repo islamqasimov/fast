@@ -5,12 +5,31 @@ from talon.models import IOC
 
 # ---- 1. Fetch ----
 def fetch(mode: str):
-    print(f"[TALON] Fetching in {mode} mode...")
-    path = Path("tests/fixtures/talon/fake.json")
-    if not path.exists():
-        raise FileNotFoundError("fake.json not found!")
-    with open(path, "r") as f:
-        return json.load(f)
+    """Fetches data from the fixture if mode is offline, or from all fetchers in the registry if online."""
+    if mode == "offline":
+        print("[TALON] Offline mode: Reading fake.json...")
+        path = Path("tests/fixtures/talon/fake.json")
+        if not path.exists():
+            raise FileNotFoundError("fake.json not found!")
+        with open(path, "r") as f:
+            return json.load(f)
+    
+    elif mode == "online":
+        print("[TALON] Online mode: Running fetchers...")
+        from talon.fetchers.registry import FETCHERS
+        
+        all_raw_data = []
+        for name, fetcher_func in FETCHERS.items():
+            print(f"  -> Running {name}...")
+            data = fetcher_func()
+            if data:
+                all_raw_data.extend(data)
+        
+        print(f"[TALON] Total of {len(all_raw_data)} raw IOCs fetched.")
+        return all_raw_data
+    
+    else:  # For now, behave like offline for diff mode
+        return fetch("offline")
 
 # ---- 2. Normalize ----
 def normalize(raw_iocs: list) -> list[IOC]:
