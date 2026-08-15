@@ -1,0 +1,96 @@
+---
+# Wazuh Manager + Indexer + Dashboard quraşdırma
+# Rəsmi Wazuh Docker Compose single-node quraşdırmasına əsaslanır.
+
+- name: Sistemin yenilənməsi
+  apt:
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+
+- name: Lazımi paketlərin quraşdırılması
+  apt:
+    name:
+      - git
+      - curl
+      - python3-pip
+    state: present
+  become: true
+
+- name: vm.max_map_count parametrinin təyin edilməsi (Wazuh Indexer tələbi)
+  sysctl:
+    name: vm.max_map_count
+    value: "262144"
+    state: present
+    reload: true
+  become: true
+
+- name: Wazuh Docker quraşdırma qovluğunun yaradılması
+  file:
+    path: /opt/wazuh-docker
+    state: directory
+    owner: "{{ ansible_user }}"
+    mode: "0755"
+  become: true
+
+- name: Wazuh Docker repo-nun klonlanması (rəsmi single-node)
+  git:
+    repo: https://github.com/wazuh/wazuh-docker.git
+    dest: /opt/wazuh-docker
+    version: "v4.9.0"
+    force: true
+  become: true
+
+- name: Self-signed sertifikatların generasiyası
+  command:
+    cmd: docker compose -f generate-indexer-certs.yml run --rm generator
+    chdir: /opt/wazuh-docker/single-node
+  become: true
+  args:
+    creates: /opt/wazuh-docker/single-node/config/wazuh_indexer_ssl_certs/root-ca.pem
+
+- name: CDB list qovluğunun yaradılması (IOC inteqrasiyası üçün)
+  file:
+    path: /opt/wazuh-docker/single-node/config/wazuh_cluster/etc_lists
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Custom Wazuh qaydalarının qovluğunun yaradılması
+  file:
+    path: /opt/wazuh-docker/single-node/config/wazuh_cluster/etc_rules
+    state: directory
+    mode: "0755"
+  become: true
+
+- name: Custom IOC detection qaydasının yerləşdirilməsi
+  template:
+    src: ioc_rules.xml.j2
+    dest: /opt/wazuh-docker/single-node/config/wazuh_cluster/etc_rules/local_rules.xml
+    mode: "0644"
+  become: true
+
+- name: docker-compose.yml-də custom rules/lists mount-larının əlavə edilməsi
+  template:
+    src: docker-compose.override.yml.j2
+    dest: /opt/wazuh-docker/single-node/docker-compose.override.yml
+    mode: "0644"
+  become: true
+
+- name: Wazuh stack-in işə salınması (docker compose up -d)
+  command:
+    cmd: docker compose up -d
+    chdir: /opt/wazuh-docker/single-node
+  become: true
+
+- name: Wazuh Dashboard-ın açılmasının gözlənilməsi (60 saniyə)
+  wait_for:
+    port: 443
+    host: "0.0.0.0"
+    delay: 20
+    timeout: 180
+  become: true
+
+- name: Quraşdırmanın tamamlandığının bildirilməsi
+  debug:
+    msg: "Wazuh Manager hazırdır. Dashboard: https://{{ ansible_host }}"

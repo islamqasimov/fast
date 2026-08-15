@@ -1,0 +1,38 @@
+<!--
+  Custom qaydalar - OSINT IOC Collector inteqrasiyası.
+
+  Bu qaydalar core/wazuh_export.py tərəfindən yaradılan
+  /var/ossec/etc/lists/ioc-ips CDB list-i ilə işləyir.
+
+  Format: hər sətir "IP:1" şəklindədir (Wazuh CDB list tələbi).
+-->
+<group name="local,osint_ioc,">
+
+  <!-- CDB list-i lookup üçün elan et -->
+  <rule id="100100" level="0">
+    <list field="srcip" lookup="address_match_key" check_value="1">etc/lists/ioc-ips</list>
+    <description>OSINT IOC list yoxlanışı (səssiz baza qayda)</description>
+  </rule>
+
+  <!-- Real alert: bilinən firewall/şəbəkə hadisələrində srcip IOC list-də tapılırsa -->
+  <rule id="100101" level="12">
+    <if_sid>100100</if_sid>
+    <description>UYARI: Şəbəkə hadisəsində OSINT IOC Collector-un bilinən pis IP-si aşkarlandı (srcip: $(srcip))</description>
+    <mitre>
+      <id>T1071</id>
+    </mitre>
+    <group>osint_ioc_match,</group>
+  </rule>
+
+  <!-- SSH/autentifikasiya hadisələrində eyni yoxlama -->
+  <rule id="100102" level="12">
+    <if_group>authentication_failed</if_group>
+    <list field="srcip" lookup="address_match_key" check_value="1">etc/lists/ioc-ips</list>
+    <description>UYARI: Autentifikasiya cəhdi bilinən pis IP-dən (OSINT IOC match, srcip: $(srcip))</description>
+    <mitre>
+      <id>T1110</id>
+    </mitre>
+    <group>osint_ioc_match,authentication_failed,</group>
+  </rule>
+
+</group>

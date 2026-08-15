@@ -1,84 +1,140 @@
-# F.A.S.T. - Fully Automated SIEM & Threat-intel
+# F.A.S.T. — OSINT Threat Aggregation + Fast-Deploy SIEM
 
-> Holberton capstone project: a Docker Compose-based deployment that turns one Ubuntu VM into a self-contained SOC lab (Wazuh + in-house T.A.L.O.N. threat-intel pipeline).
+**F.A.S.T.** = Fully Automated SIEM & Threat-Intel Tool
 
-This README is for humans. **For AI agents, see [CONTEXT.md](./CONTEXT.md).**
+Açıq mənbəli (OSINT) təhdid kəşfiyyatını sürətli yerləşdirilən Wazuh SIEM
+ilə birləşdirən threat aggregation platforması. 4 pulsuz feed-dən IOC
+yığır, normallaşdırır, dedup edir və Wazuh-a real-time detection
+qaydaları kimi ötürür — hamısı **tək bir skriptlə, dəqiqələr ərzində**.
 
-## What's in the repo
+## 🎯 Məqsəd
+
+Qısamüddətli tədbirlərdə (CTF, təlim, pentest) işləyən SOC komandaları
+üçün — kommersiya SIEM lisenziyası və saatlarla quraşdırma olmadan,
+sıfır-xərcli, portativ monitorinq mühiti.
+
+## ⚡ Sürətli Başlanğıc
+
+**Tövsiyə olunan ssenari:** Wazuh SIEM cloud Ubuntu VM-də işləyir, sən isə
+öz host maşınından (Windows/Mac/Linux) Wazuh Agent ilə ona qoşulursan.
+
+**Cloud VM-də** (SSH ilə qoşulub):
+```bash
+git clone <bu-repo-url> fast-siem
+cd fast-siem
+./deploy.sh
+```
+
+5-10 dəqiqə sonra: Wazuh Dashboard VM-in IP-si üzərindən açıq
+(`https://<VM_IP>`), IOC-lar axır. Ətraflı: [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md)
+
+**Sənin host maşınında:** Wazuh Agent quraşdırıb Manager-ə (cloud VM-ə)
+qoşulursan — addımlar üçün bax: [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md#wazuh-agent-qoşmaq-log-toplama-üçün)
+
+> Lokal (öz kompüterində) sınaq üçün eyni `./deploy.sh` sənin öz
+> maşınında da işləyir — bu halda `https://localhost` istifadə olunur.
+
+> IP-ni əl ilə göstərmək üçün: `./deploy.sh --ip <MANAGER_IP>`.
+> Verilməzsə, skript sonunda IP-ni özü aşkarlayıb agent-qoşma
+> əmrlərini hazır formada çap edir.
+
+## 🧩 Necə İşləyir
 
 ```
-fast/
-├── compose/             Docker Compose stack (T1.2)
-├── installer/           Bash installer + secret/cron/firewall helpers
-├── bin/fast             Thin CLI wrapper (up, down, reset, status, demo, doctor, ...)
-├── etc/                 Configuration templates (rules, decoders, fast.env)
-├── secrets/             Generated secrets, mode 0600 (gitignored)
-├── var/                 Mounted volumes (gitignored)
-├── logs/                Installer and runtime logs (gitignored)
-├── docs/                Runbook, demo script, upgrade guide
-├── sim/                 Incident simulation scripts
-├── tests/               Unit, integration, acceptance tests
-└── README.md, CONTEXT.md
+4 açıq feed → IOC Collector → normalize+dedup+score → Wazuh CDB list → Wazuh Manager → real-time alert
 ```
 
-## Quickstart on a fresh Ubuntu VM
+1. **OSINT IOC Collector** (Python) — Feodo Tracker, URLhaus,
+   MalwareBazaar, Spamhaus DROP-dan IOC yığır
+2. **Normalizasiya + Dedup + Scoring** — vahid sxem, təkrarsız, neçə
+   feed-də görünməsinə əsasən etibarlılıq balı
+3. **Wazuh SIEM** (Docker) — Manager+Indexer+Dashboard, IOC-lar CDB list
+   formatında real-time detection qaydalarına bağlanır
+
+## Dəstəklənən Feed-lər
+
+1. **Feodo Tracker** — Botnet C2 IP adresləri
+2. **URLhaus** — Zərərli URL-lər
+3. **MalwareBazaar** — Malware hash-ləri (MD5, SHA256)
+4. **Spamhaus DROP** — Spam/botnet IP diapazonları
+
+## Texnologiyalar
+
+- Python 3.11+, SQLite3, requests, pytest (56 avtomatlaşdırılmış test)
+- Wazuh OSS (Manager + Indexer + Dashboard)
+- Docker, Docker Compose, Bash
+
+## Layihə Strukturu
+
+```
+fast-siem/
+├── core/                       # OSINT IOC Collector - əsas funksionallıq
+│   ├── fetchers.py            # 4 feed fetcher
+│   ├── normalizer.py          # Normallaşdırma
+│   ├── db.py                  # SQLite CRUD + dedup + avtomatik scoring
+│   ├── scoring.py             # Confidence scoring məntiqi
+│   ├── exporter.py            # CSV/JSON export
+│   └── wazuh_export.py        # Wazuh CDB list export
+├── docker/
+│   ├── ioc-collector.Dockerfile
+│   └── rules/local_rules.xml         # IOC detection qaydaları (docker cp ilə tətbiq olunur)
+├── windows/
+│   └── install-wazuh-agent.ps1       # Windows host üçün avtomatik Agent quraşdırma
+├── tests/                      # pytest testləri (56 test)
+├── docs/
+│   ├── DEPLOYMENT_GUIDE.md    # Addım-addım quraşdırma
+│   ├── USAGE_QUICK_REFERENCE.md      # Sürətli istinad (Windows + WSL)
+│   ├── feed_map.md            # Feed sahələrinin xəritəsi
+│   └── user_guide.md          # CLI istifadə təlimatı
+├── infra/                      # (Alternativ) Terraform+Ansible cloud IaC
+│                                # - əsas yol deyil, bax infra/README.md
+├── sample_output/              # Nümunə export faylları
+├── cli.py                      # Terminal interfeysi
+├── deploy.sh                   # ⭐ TƏK-SKRİPTLİ TAM DEPLOYMENT
+├── refresh_iocs.sh             # IOC-ları yeniləmə (manual/cron)
+├── requirements.txt
+└── README.md                   # Bu fayl
+```
+
+## CLI İstifadəsi (yalnız IOC Collector, SIEM olmadan)
 
 ```bash
-git clone https://github.com/<team>/fast.git
-cd fast
-sudo ./install.sh --mode interactive
-bin/fast status
+pip install -r requirements.txt
+python cli.py --init-db
+python cli.py --fetch                # Bütün feed-lərdən yığ
+python cli.py --show                 # Nəticələri göstər
+python cli.py --export csv           # CSV export
+python cli.py --export json          # JSON export
+python cli.py --export wazuh         # Wazuh CDB list export
 ```
 
-The installer:
-1. Verifies Docker Engine 24.x and Docker Compose v2 are installed.
-2. Generates secrets under `secrets/` (mode 0600, length 20+, 3 character classes).
-3. Copies `etc/fast.env.example` to `etc/fast.env` if missing.
-4. Installs `/etc/cron.d/talon` for daily IOC pipeline runs.
-5. Sets up iptables rules so only the `talon` container has outbound access.
-6. Pulls and starts the Wazuh + T.A.L.O.N. stack.
+## Verilənlər Bazası Sxemi
 
-Open the dashboard at `https://<vm-host>` (or `https://localhost` if you SSH-tunneled 443).
+```
+ioc (table)
+├── id                INTEGER PRIMARY KEY
+├── ioc_value         TEXT (IP/Domain/Hash/URL)
+├── ioc_type          TEXT (ip, domain, hash, url)
+├── source_feed       TEXT (feodo, urlhaus, ...)
+├── first_seen        DATETIME
+├── last_seen         DATETIME
+├── confidence_score  INTEGER (feed sayına görə: 25/50/75/100)
+└── tags              TEXT (JSON array)
+```
 
-## Daily usage
+## Xəta Toleration
+
+- Feed əlçatan deyilsə → log yazıb davam et, crash yoxdur
+- Dedup: eyni `ioc_value + ioc_type` varsa → `last_seen` yenilə, insert etmə
+- Scoring: neçə fərqli feed-də görünübsə, bal bir o qədər yüksəkdir
+
+## Testlər
 
 ```bash
-bin/fast up          # bring the stack online
-bin/fast down        # stop, preserve data
-bin/fast status      # container health
-bin/fast demo        # run all four simulations and print pass/fail
-bin/fast doctor      # run T.A.L.O.N. self-check
-bin/fast verify      # recompute image digests; fail on drift
-bin/fast reset --yes # destroy data volumes
+pip install pytest
+python -m pytest tests/ -v   # 56 test
 ```
 
-## Architecture
+---
 
-One-liner: **Wazuh (manager + indexer + dashboard) + Wazuh agent on a `agent-linux` test container + an in-house Python T.A.L.O.N. pipeline that pulls from four OSINT feeds (Feodo Tracker, URLhaus, MalwareBazaar, Spamhaus DROP) and writes a Wazuh CDB list.**
-
-```
-agent-linux  ---1514--->  wazuh-manager  ---9200--->  wazuh-indexer
-                                ^
-                                | manager reads CDB list from
-                                |
-                              talon  --- writes to shared volume ---
-```
-
-For the full spec, see [docs/spec.md](./docs/spec.md) (mirrors the parent `knowledge.md` at the repo root level).
-
-## Status
-
-Week 1 of 4. The compose skeleton is in place; the Wazuh stack and T.A.L.O.N. are scaffolded but the `talon/` package is still to be built by Nihat.
-
-## Team
-
-| Person | Role | Owns |
-|--------|------|------|
-| Islam | Project Manager | L1 installer + CLI + cron, weekly risk register |
-| Elmir | Developer | L2 Wazuh rules, decoders, dashboards |
-| Nihat | Developer | L3 T.A.L.O.N. core + L4 dashboard |
-| Ramin | Technical Writer | L5 simulations, runbook, demo slides |
-
-## License
-
-Internal capstone project.
+**Layihə:** F.A.S.T. (Fully Automated SIEM & Threat-Intel Tool) | **Tələbələr:** Islam, Elmir, Nihat, Ramin

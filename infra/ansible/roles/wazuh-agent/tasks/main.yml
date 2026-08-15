@@ -1,0 +1,49 @@
+---
+# Linux Target VM-də Wazuh Agent quraşdırma
+# Bu VM cloud daxilində olduğu üçün avtomatik agent qeydiyyatı istifadə olunur.
+
+- name: Wazuh GPG açarının əlavə edilməsi
+  apt_key:
+    url: https://packages.wazuh.com/key/GPG-KEY-WAZUH
+    state: present
+  become: true
+
+- name: Wazuh apt repo-sunun əlavə edilməsi
+  apt_repository:
+    repo: "deb https://packages.wazuh.com/4.x/apt/ stable main"
+    state: present
+    filename: wazuh
+  become: true
+
+- name: apt cache-in yenilənməsi
+  apt:
+    update_cache: true
+  become: true
+
+- name: Wazuh Agent paketinin quraşdırılması
+  apt:
+    name: wazuh-agent
+    state: present
+  become: true
+  environment:
+    WAZUH_MANAGER: "{{ hostvars['wazuh-manager']['ansible_host'] }}"
+
+- name: ossec.conf-da manager IP-sinin təyin edilməsi
+  lineinfile:
+    path: /var/ossec/etc/ossec.conf
+    regexp: '<address>.*</address>'
+    line: "    <address>{{ hostvars['wazuh-manager']['ansible_host'] }}</address>"
+  become: true
+  notify: restart wazuh-agent
+
+- name: systemd-in yenidən yüklənməsi
+  systemd:
+    daemon_reload: true
+  become: true
+
+- name: Wazuh Agent servisinin aktivləşdirilməsi və başladılması
+  systemd:
+    name: wazuh-agent
+    enabled: true
+    state: started
+  become: true
