@@ -5,24 +5,35 @@ dəqiqələr ərzində ayağa qaldıracağını izah edir.
 
 ## Tələblər
 
-- Docker (20.10+) və Docker Compose plugin
+- Ən azı 4 CPU nüvəsi, 8 GB RAM və 50 GB boş disk
+- Docker Engine və Docker Compose plugin
 - Git
-- ~4GB boş RAM, ~10GB boş disk
-- Linux, macOS, yaxud Windows (WSL2 üzərindən)
+- İnternet bağlantısı
+- Linux host və ya Windows üzərində WSL2
 
-Yoxla:
+Linux və WSL2 host-da Wazuh Indexer üçün aşağıdakı kernel parametrini
+təyin edin:
+
+```bash
+sudo sysctl -w vm.max_map_count=262144
+```
+
+Tələb olunan proqramları yoxlayın:
+
 ```bash
 docker --version
 docker compose version
 git --version
 ```
 
-Docker yoxdursa: https://docs.docker.com/engine/install/
+Docker quraşdırılması üçün rəsmi
+[Docker Engine sənədlərinə](https://docs.docker.com/engine/install/)
+baxın.
 
 ## Sürətli Başlanğıc (Tək Əmr)
 
-**Tövsiyə olunan ssenari:** Wazuh SIEM cloud Ubuntu VM-də işləyir. Aşağıdakı
-əmrləri **VM-ə SSH ilə qoşulub, orada** icra et:
+**Tövsiyə olunan ssenari:** Wazuh SIEM cloud Ubuntu VM-də işləyir.
+Aşağıdakı əmrləri VM-ə SSH ilə qoşulub, orada icra edin:
 
 ```bash
 git clone <bu-repo-url> fast-siem
@@ -30,16 +41,16 @@ cd fast-siem
 ./deploy.sh
 ```
 
-> **İpucu:** Manager-in IP-sini əl ilə göstərmək istəyirsənsə (məs.
-> Tailscale IP-si), `--ip` parametrini istifadə et:
-> ```bash
-> ./deploy.sh --ip 100.87.195.65
-> ```
-> Verilməzsə, skript sonunda IP-ni özü aşkarlayıb (Tailscale → public IP
-> → lokal IP sırası ilə) hazır agent-qoşma əmrlərini çap edir.
+Manager IP-ni əl ilə göstərmək üçün:
+```bash
+./deploy.sh --ip <MANAGER_IP>
+```
 
-> Sınaq/demo məqsədilə eyni əmrləri öz lokal maşınında da (WSL/Linux/Mac)
-> işlətmək olar — bu halda Manager IP-si `localhost` olacaq.
+IP verilmədikdə skript Tailscale, public və lokal IP ardıcıllığı ilə
+Manager ünvanını avtomatik müəyyənləşdirməyə çalışır.
+
+> **Qeyd:** Lokal sınaq üçün eyni skript Linux və ya WSL2 mühitində
+> işlədilə bilər. Bu halda Manager ünvanı `localhost` olacaq.
 
 Bu qədər. Skript aşağıdakıları avtomatik edir:
 
