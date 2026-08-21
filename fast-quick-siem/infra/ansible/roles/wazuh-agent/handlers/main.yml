@@ -1,6 +1,0 @@
----
-- name: restart wazuh-agent
-  systemd:
-    name: wazuh-agent
-    state: restarted
-  become: true

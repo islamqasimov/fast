@@ -1,8 +1,0 @@
----
-# İstifadə: ansible-playbook playbook-wazuh-manager.yml
-
-- name: Wazuh Manager + Indexer + Dashboard quraşdırılması
-  hosts: wazuh_manager
-  become: true
-  roles:
-    - wazuh-manager

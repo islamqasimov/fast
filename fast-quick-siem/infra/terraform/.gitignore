@@ -1,9 +1,0 @@
-# Sensitiv fayllar - HEÇ VAXT commit edilməməlidir
-terraform.tfvars
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-crash.log
-*.pem
-*.key

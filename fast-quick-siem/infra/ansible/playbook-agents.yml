@@ -1,9 +1,0 @@
----
-# İstifadə: ansible-playbook playbook-agents.yml
-# Qeyd: wazuh_manager host-u inventory-də olmalıdır (hostvars üçün istifadə olunur)
-
-- name: Linux Target-də Wazuh Agent quraşdırılması
-  hosts: linux_target
-  become: true
-  roles:
-    - wazuh-agent

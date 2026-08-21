@@ -1,9 +1,0 @@
-# Bu fayl Ansible tərəfindən avtomatik yaradılıb.
-# Məqsəd: custom IOC detection qaydalarını və CDB list-ləri
-# Wazuh Manager konteynerinin daxilinə mount etmək.
-
-services:
-  wazuh.manager:
-    volumes:
-      - ./config/wazuh_cluster/etc_rules/local_rules.xml:/var/ossec/etc/rules/local_rules.xml
-      - ./config/wazuh_cluster/etc_lists:/var/ossec/etc/lists
